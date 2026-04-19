@@ -68,8 +68,15 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="flex-1 md:p-8 p-4 pt-20 md:pt-8 max-w-6xl">
-        <div className="animate-fade-in">{children}</div>
+      <main className="relative flex-1 md:p-8 p-4 pt-20 md:pt-8">
+        {/* soft surface so cards feel grounded */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/10 to-background/40" />
+          <div className="absolute inset-0 opacity-[0.06] [background-image:radial-gradient(hsl(var(--foreground))_1px,transparent_1px)] [background-size:18px_18px]" />
+        </div>
+        <div className="relative mx-auto w-full max-w-6xl animate-fade-in">
+          {children}
+        </div>
       </main>
     </div>
   );

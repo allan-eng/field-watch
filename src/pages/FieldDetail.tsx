@@ -50,6 +50,8 @@ export default function FieldDetail() {
   const [agentName, setAgentName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  /** Radix Select does not submit with FormData — track stage choice in state. */
+  const [stageChoice, setStageChoice] = useState("none");
 
   const load = async () => {
     if (!id) return;
@@ -66,7 +68,10 @@ export default function FieldDetail() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [id]);
+  useEffect(() => {
+    setStageChoice("none");
+    load();
+  }, [id]);
 
   const canPostUpdate =
     field && user && (role === "admin" || field.assigned_agent_id === user.id);
@@ -77,7 +82,7 @@ export default function FieldDetail() {
     const fd = new FormData(e.currentTarget);
     const parsed = noteSchema.safeParse({
       note: (fd.get("note") as string) ?? "",
-      stage: (fd.get("stage") as string) ?? "none",
+      stage: stageChoice,
     });
     if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
     setSubmitting(true);
@@ -92,6 +97,7 @@ export default function FieldDetail() {
     setSubmitting(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Update posted");
+    setStageChoice("none");
     (e.target as HTMLFormElement).reset();
     load();
   };
@@ -140,7 +146,7 @@ export default function FieldDetail() {
           <form onSubmit={handlePostUpdate} className="space-y-3">
             <div className="space-y-2">
               <Label htmlFor="stage">Change stage {suggested && <span className="text-xs text-muted-foreground">(suggested: {STAGE_LABEL[suggested]})</span>}</Label>
-              <Select name="stage" defaultValue="none">
+              <Select value={stageChoice} onValueChange={setStageChoice}>
                 <SelectTrigger id="stage"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">— Keep current ({STAGE_LABEL[field.current_stage]}) —</SelectItem>

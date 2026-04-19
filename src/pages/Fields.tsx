@@ -4,6 +4,7 @@ import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import AppLayout from "@/components/AppLayout";
+import PageHeader from "@/components/PageHeader";
 import { computeStatus, FieldStage, FieldStatus } from "@/lib/status";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StageBadge } from "@/components/StageBadge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Wheat } from "lucide-react";
 import { toast } from "sonner";
 
@@ -45,6 +47,8 @@ export default function Fields() {
   const [agents, setAgents] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  /** Radix Select does not submit with FormData — track assignment in state. */
+  const [assignAgentId, setAssignAgentId] = useState<string>("none");
 
   const load = async () => {
     const { data } = await supabase
@@ -85,7 +89,7 @@ export default function Fields() {
       planting_date: fd.get("planting_date"),
       size_hectares: fd.get("size_hectares"),
       location: fd.get("location"),
-      assigned_agent_id: fd.get("assigned_agent_id"),
+      assigned_agent_id: assignAgentId,
     });
     if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
     const v = parsed.data;
@@ -106,23 +110,25 @@ export default function Fields() {
 
   return (
     <AppLayout>
-      <div className="flex items-end justify-between mb-8 flex-wrap gap-4">
-        <div>
-          <h1 className="font-display text-4xl font-semibold mb-1">Fields</h1>
-          <p className="text-muted-foreground">
-            {role === "admin" ? "Manage and assign every field." : "Fields assigned to you."}
-          </p>
-        </div>
-        {role === "admin" && (
-          <Dialog open={open} onOpenChange={setOpen}>
+      <PageHeader
+        title="Fields"
+        subtitle={role === "admin" ? "Manage, assign, and review every field from one place." : "A streamlined list of fields assigned to you."}
+        actions={role === "admin" && (
+          <Dialog
+            open={open}
+            onOpenChange={(o) => {
+              setOpen(o);
+              if (!o) setAssignAgentId("none");
+            }}
+          >
             <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-1" /> New field</Button>
+              <Button><Plus className="mr-1 h-4 w-4" /> New field</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader><DialogTitle>Create field</DialogTitle></DialogHeader>
               <form onSubmit={handleCreate} className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2 col-span-2">
+                  <div className="col-span-2 space-y-2">
                     <Label htmlFor="name">Name</Label>
                     <Input id="name" name="name" required placeholder="North Plot" />
                   </div>
@@ -142,10 +148,10 @@ export default function Fields() {
                     <Label htmlFor="location">Location</Label>
                     <Input id="location" name="location" placeholder="Optional" />
                   </div>
-                  <div className="space-y-2 col-span-2">
+                  <div className="col-span-2 space-y-2">
                     <Label>Assign to agent</Label>
-                    <Select name="assigned_agent_id" defaultValue="none">
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    <Select value={assignAgentId} onValueChange={setAssignAgentId}>
+                      <SelectTrigger><SelectValue placeholder="Assign agent" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">— Unassigned —</SelectItem>
                         {agents.map((a) => (
@@ -162,10 +168,10 @@ export default function Fields() {
             </DialogContent>
           </Dialog>
         )}
-      </div>
+      />
 
       {loading ? (
-        <div className="text-muted-foreground">Loading…</div>
+        <FieldsSkeleton />
       ) : rows.length === 0 ? (
         <Card className="p-12 text-center">
           <Wheat className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
@@ -203,5 +209,30 @@ export default function Fields() {
         </div>
       )}
     </AppLayout>
+  );
+}
+
+function FieldsSkeleton() {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <Card key={index} className="h-full bg-gradient-card p-5 shadow-soft">
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+            <Skeleton className="h-6 w-20 rounded-full" />
+          </div>
+          <div className="mb-5 flex items-center gap-2">
+            <Skeleton className="h-6 w-16 rounded-md" />
+            <Skeleton className="h-4 w-12" />
+          </div>
+          <div className="border-t pt-3">
+            <Skeleton className="h-3.5 w-full" />
+          </div>
+        </Card>
+      ))}
+    </div>
   );
 }
